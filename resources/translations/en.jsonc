@@ -1,0 +1,22 @@
+{
+  "steamrestrict.private_profile_warning_chat": "[green]Your Steam profile or game details are private. Set them to Public to play. You will be kicked in {0} seconds.[/]",
+
+  "steamrestrict.log.disabled": "SteamRestrict disabled: SteamWebAPI is empty",
+  "steamrestrict.log.player_not_found": "SteamRestrict OnClientPutInServer: player not found for PlayerId={0}",
+  "steamrestrict.log.steamid_zero": "SteamRestrict OnClientPutInServer: SteamID was 0 for PlayerId={0}",
+  "steamrestrict.log.validating_join": "SteamRestrict validating join: Name={0} SteamId={1}",
+  "steamrestrict.log.restriction_violated": "SteamRestrict restriction violated: SteamId={0} ViolationType={1}",
+  "steamrestrict.log.restriction_violated_details": "SteamRestrict restriction violated: SteamId={0} ViolationType={1} Details={2}",
+  "steamrestrict.log.private_warning_started": "SteamRestrict private profile warning started: SteamId={0} WarningTime={1} PrintSeconds={2} IsPrivate={3} IsGameDetailsPrivate={4}",
+  "steamrestrict.log.validation_crashed": "SteamRestrict validation task crashed: PlayerId={0} SteamId={1}",
+  "steamrestrict.log.validation_passed": "SteamRestrict validation passed: SteamId={0} CS2Level={1}/{2} Hours={3}/{4} SteamLevel={5}/{6} Private={7}",
+
+  "steamrestrict.log.loading_config": "SteamRestrict loading config from {0} (section: SteamRestrict)",
+  "steamrestrict.log.config_path_not_resolved": "SteamRestrict could not resolve config.jsonc path",
+  "steamrestrict.log.config_loaded_bind": "SteamRestrict config loaded from section 'SteamRestrict' (Bind)",
+  "steamrestrict.log.config_bound_empty_api": "SteamRestrict config bound but SteamWebAPI is empty; attempting file fallback scan",
+  "steamrestrict.log.fallback_scan_failed": "SteamRestrict file fallback scan failed",
+  "steamrestrict.log.recovered_api": "SteamRestrict recovered SteamWebAPI from file scan",
+  "steamrestrict.log.config_parsed": "SteamRestrict config parsed: SteamWebAPI={0}",
+  "steamrestrict.log.config_load_failed": "SteamRestrict failed to load config (Bind); using defaults"
+}
