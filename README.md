@@ -85,7 +85,7 @@ On first run the config will be created automatically. The exact resolved path i
 
 ### Key Configuration Options
 
-- `LogProfileInformations`: Enable/disable logging of profile information (default: true)
+- `LogProfileInformations`: Enable/disable informational logs (default: true)
 - `ChatPrefix`: Prefix for chat messages (default: "[SteamRestrict]")
 - `ChatPrefixColor`: Color for the chat prefix (default: "[red]")
 - `SteamWebAPI`: Your Steam Web API key (required for functionality). You can obtain an API key from https://steamcommunity.com/dev/apikey
@@ -100,11 +100,23 @@ On first run the config will be created automatically. The exact resolved path i
 - `BlockGameBanned`: Block game banned accounts (default: false)
 - `PrivateProfileWarningTime`: Time in seconds to warn private profile users before kick (default: 20)
 - `PrivateProfileWarningPrintSeconds`: Interval for warning messages (default: 3)
+- `DatabaseConnectionString`: Database connection string name/key used by SwiftlyS2 (default: "default")
+- `CacheExpirationDays`: How long cached profiles stay in the database before cleanup deletes them (default: 30)
 
 ## How It Works
 
 ### Steam Profile Checking
 The plugin uses the Steam Web API to fetch detailed player profile information when they connect to the server.
+
+### Database Cache
+If database caching is available, the plugin stores the fetched profile data in a database table and reuses it on future joins.
+
+- If a player is found in the database cache, the plugin uses the cached data and does not call the Steam Web API for that join.
+- If no cached entry exists (or database is unavailable), the plugin calls the Steam Web API and then writes the result to the database.
+- Old cache entries are deleted by periodic cleanup after `CacheExpirationDays`.
+
+### Logging
+Most `Information` logs are only printed when `LogProfileInformations` is `true`. Warnings and errors are always logged.
 
 ### Restrictions Enforcement
 Players are evaluated against the configured restrictions:
