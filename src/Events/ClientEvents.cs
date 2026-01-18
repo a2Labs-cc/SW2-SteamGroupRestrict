@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using SteamRestrict.Config;
+using SteamRestrict.Database;
 using SteamRestrict.Services;
 using System.Linq;
 using SwiftlyS2.Shared;
@@ -16,6 +17,7 @@ public sealed class ClientEvents
     private readonly RestrictionService _restriction;
     private readonly WarningTimerService _warnings;
     private readonly Dictionary<int, CancellationTokenSource> _validationTokens = new();
+    private readonly PlayerProfileRepository? _repository;
 
     public ClientEvents(
         ISwiftlyCore core,
@@ -31,6 +33,16 @@ public sealed class ClientEvents
         _steamApi = steamApi;
         _restriction = restriction;
         _warnings = warnings;
+
+        try
+        {
+            var connection = _core.Database.GetConnection(_config.DatabaseConnectionString);
+            _repository = new PlayerProfileRepository(connection, _logger);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "SteamRestrict failed to initialize database repository, caching disabled");
+        }
     }
 
     public void Register()
@@ -88,7 +100,28 @@ public sealed class ClientEvents
                 try
                 {
                     var userInfo = new SteamUserInfo();
-                    await _steamApi.PopulateSteamUserInfoAsync(steamId.ToString(), userInfo, cts.Token);
+                    var usedCache = false;
+
+                    if (_repository != null)
+                    {
+                        var cachedProfile = await _repository.GetBySteamIdAsync((long)steamId);
+                        if (cachedProfile != null)
+                        {
+                            PlayerProfileRepository.ToSteamUserInfo(cachedProfile, userInfo);
+                            usedCache = true;
+
+                            if (_config.LogProfileInformations)
+                            {
+                                var cacheAge = DateTime.UtcNow - cachedProfile.LastCheckedAt;
+                                _logger.LogInformation("SteamRestrict using cached data for SteamId={SteamId}, age={Age:F1}h", steamId, cacheAge.TotalHours);
+                            }
+                        }
+                    }
+
+                    if (!usedCache)
+                    {
+                        await _steamApi.PopulateSteamUserInfoAsync(steamId.ToString(), userInfo, cts.Token);
+                    }
 
                     _core.Scheduler.NextWorldUpdate(() =>
                     {
@@ -98,10 +131,17 @@ public sealed class ClientEvents
                             return;
                         }
 
+                        var currentSteamId = p.SteamID;
+                        if (currentSteamId == 0)
+                        {
+                            _logger?.LogWarning("SteamRestrict NextWorldUpdate: SteamID is 0 for PlayerId={PlayerId}", @event.PlayerId);
+                            return;
+                        }
+
                         var cs2Level = 0;
                         try
                         {
-                            cs2Level = controller.InventoryServices?.PersonaDataPublicLevel ?? 0;
+                            cs2Level = p.Controller.InventoryServices?.PersonaDataPublicLevel ?? 0;
                         }
                         catch
                         {
@@ -124,18 +164,18 @@ public sealed class ClientEvents
 
                             if (violationDetails is null)
                             {
-                                _logger.LogWarning("SteamRestrict restriction violated: SteamId={SteamId} ViolationType={ViolationType}", steamId, violationType.Value);
+                                _logger.LogWarning("SteamRestrict restriction violated: SteamId={SteamId} ViolationType={ViolationType}", currentSteamId, violationType.Value);
                             }
                             else
                             {
-                                _logger.LogWarning("SteamRestrict restriction violated: SteamId={SteamId} ViolationType={ViolationType} Details={Details}", steamId, violationType.Value, violationDetails);
+                                _logger.LogWarning("SteamRestrict restriction violated: SteamId={SteamId} ViolationType={ViolationType} Details={Details}", currentSteamId, violationType.Value, violationDetails);
                             }
                             if (_restriction.ShouldWarnPrivateProfile(userInfo))
                             {
                                 if (_config.LogProfileInformations)
                                 {
                                     _logger.LogInformation("SteamRestrict private profile warning started: SteamId={SteamId} WarningTime={WarningTime} PrintSeconds={PrintSeconds} IsPrivate={IsPrivate} IsGameDetailsPrivate={IsGameDetailsPrivate}",
-                                        steamId, _config.PrivateProfileWarningTime, _config.PrivateProfileWarningPrintSeconds, userInfo.IsPrivate, userInfo.IsGameDetailsPrivate);
+                                        currentSteamId, _config.PrivateProfileWarningTime, _config.PrivateProfileWarningPrintSeconds, userInfo.IsPrivate, userInfo.IsGameDetailsPrivate);
                                 }
                                 var playerLoc = _core.Translation.GetPlayerLocalizer(p);
                                 var prefix = FormatChatPrefix(_config.ChatPrefix, _config.ChatPrefixColor);
@@ -153,7 +193,7 @@ public sealed class ClientEvents
                         {
                             _logger.LogInformation(
                                 "SteamRestrict validation passed: SteamId={SteamId} CS2Level={CS2Level}/{MinCS2Level} Hours={Hours}/{MinHours} SteamLevel={SteamLevel}/{MinSteamLevel} Private={Private}",
-                                steamId,
+                                currentSteamId,
                                 userInfo.CS2Level,
                                 _config.MinimumCS2Level,
                                 userInfo.CS2Playtime,
@@ -162,11 +202,40 @@ public sealed class ClientEvents
                                 _config.MinimumSteamLevel,
                                 userInfo.IsPrivate || userInfo.IsGameDetailsPrivate);
                         }
+
+                        if (_repository != null && !usedCache)
+                        {
+                            var profile = PlayerProfileRepository.FromSteamUserInfo((long)currentSteamId, userInfo, violationType);
+                            
+                            if (_config.LogProfileInformations)
+                            {
+                                _logger.LogInformation("SteamRestrict preparing to save profile for SteamId={SteamId}", currentSteamId);
+                            }
+
+                            _ = Task.Run(async () =>
+                            {
+                                try
+                                {
+                                    await _repository.UpsertAsync(profile);
+                                    if (_config.LogProfileInformations)
+                                    {
+                                        _logger.LogInformation("SteamRestrict saved profile to cache for SteamId={SteamId}", currentSteamId);
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    _logger.LogError(ex, "SteamRestrict failed to save profile to cache for SteamId={SteamId}", currentSteamId);
+                                }
+                            });
+                        }
                     });
                 }
                 catch (OperationCanceledException)
                 {
-                    _logger.LogInformation("SteamRestrict validation cancelled: PlayerId={PlayerId} SteamId={SteamId}", @event.PlayerId, steamId);
+                    if (_config.LogProfileInformations)
+                    {
+                        _logger.LogInformation("SteamRestrict validation cancelled: PlayerId={PlayerId} SteamId={SteamId}", @event.PlayerId, steamId);
+                    }
                 }
                 catch (Exception ex)
                 {

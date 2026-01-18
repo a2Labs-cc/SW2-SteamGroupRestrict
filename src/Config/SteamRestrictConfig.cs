@@ -2,7 +2,7 @@ namespace SteamRestrict.Config;
 
 public sealed class SteamRestrictConfig
 {
-    public bool LogProfileInformations { get; set; } = true;
+    public bool LogProfileInformations { get; set; } = false;
 
     public string ChatPrefix { get; set; } = "[SteamRestrict]";
 
@@ -22,7 +22,7 @@ public sealed class SteamRestrictConfig
 
     public bool BlockTradeBanned { get; set; } = false;
 
-    public bool BlockVACBanned { get; set; } = false;
+    public bool BlockVACBanned { get; set; } = true;
 
     public string SteamGroupID { get; set; } = "";
 
@@ -31,4 +31,8 @@ public sealed class SteamRestrictConfig
     public int PrivateProfileWarningTime { get; set; } = 20;
 
     public int PrivateProfileWarningPrintSeconds { get; set; } = 3;
+
+    public string DatabaseConnectionString { get; set; } = "default";
+
+    public int CacheExpirationDays { get; set; } = 30;
 }

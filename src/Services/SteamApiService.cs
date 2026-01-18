@@ -51,14 +51,20 @@ public sealed class SteamApiService
             if (!response.TryGetProperty("games", out var games) || games.ValueKind != JsonValueKind.Array)
             {
                 userInfo.IsGameDetailsPrivate = true;
-                _logger?.LogInformation("SteamRestrict owned games response missing 'games' for {SteamId}; likely private game details", steamId64);
+                if (_config.LogProfileInformations)
+                {
+                    _logger?.LogInformation("SteamRestrict owned games response missing 'games' for {SteamId}; likely private game details", steamId64);
+                }
                 return 0;
             }
 
             if (games.GetArrayLength() == 0)
             {
                 userInfo.IsGameDetailsPrivate = true;
-                _logger?.LogInformation("SteamRestrict owned games list empty for {SteamId}; likely private game details", steamId64);
+                if (_config.LogProfileInformations)
+                {
+                    _logger?.LogInformation("SteamRestrict owned games list empty for {SteamId}; likely private game details", steamId64);
+                }
                 return 0;
             }
 
@@ -73,12 +79,18 @@ public sealed class SteamApiService
                         return playtime.GetInt32();
                     }
 
-                    _logger?.LogInformation("SteamRestrict CS2 app found but playtime_forever missing/invalid for {SteamId}", steamId64);
+                    if (_config.LogProfileInformations)
+                    {
+                        _logger?.LogInformation("SteamRestrict CS2 app found but playtime_forever missing/invalid for {SteamId}", steamId64);
+                    }
                     return 0;
                 }
             }
 
-            _logger?.LogInformation("SteamRestrict CS2 appid 730 not found in owned games for {SteamId}; returning 0 minutes", steamId64);
+            if (_config.LogProfileInformations)
+            {
+                _logger?.LogInformation("SteamRestrict CS2 appid 730 not found in owned games for {SteamId}; returning 0 minutes", steamId64);
+            }
             return 0;
         }
         catch (OperationCanceledException)

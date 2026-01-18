@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using SteamRestrict.Config;
+using SteamRestrict.Database;
 using SteamRestrict.Events;
 using SteamRestrict.Services;
 using SwiftlyS2.Shared;
@@ -9,13 +10,14 @@ using System.Text.Json;
 
 namespace SteamRestrict;
 
-[PluginMetadata(Id = "SteamRestrict", Version = "1.0.0", Name = "SteamRestrict", Author = "aga", Description = "No description.")]
+[PluginMetadata(Id = "SteamRestrict", Version = "1.1.0", Name = "SteamRestrict", Author = "aga", Description = "No description.")]
 public partial class SteamRestrict : BasePlugin {
   private SteamRestrictConfig _config = new();
   private readonly HttpClient _httpClient = new();
 
   private WarningTimerService? _warningTimers;
   private ClientEvents? _clientEvents;
+  private CacheCleanupService? _cacheCleanup;
 
   public SteamRestrict(ISwiftlyCore core) : base(core)
   {
@@ -34,6 +36,20 @@ public partial class SteamRestrict : BasePlugin {
 
     LoadConfig();
 
+    try
+    {
+      var connection = Core.Database.GetConnection(_config.DatabaseConnectionString);
+      MigrationRunner.RunMigrations(connection);
+      if (_config.LogProfileInformations)
+      {
+        Core.Logger.LogInformation("SteamRestrict database migrations completed successfully");
+      }
+    }
+    catch (Exception ex)
+    {
+      Core.Logger.LogError(ex, "SteamRestrict failed to run database migrations");
+    }
+
     var steamApi = new SteamApiService(_httpClient, _config, Core.Logger);
     var restrictionService = new RestrictionService(_config);
     _warningTimers = new WarningTimerService(Core, _config, Core.Logger);
@@ -48,6 +64,18 @@ public partial class SteamRestrict : BasePlugin {
     );
 
     _clientEvents.Register();
+
+    try
+    {
+      var connection = Core.Database.GetConnection(_config.DatabaseConnectionString);
+      var repository = new PlayerProfileRepository(connection, Core.Logger);
+      _cacheCleanup = new CacheCleanupService(Core, _config, repository, Core.Logger);
+      _cacheCleanup.StartPeriodicCleanup();
+    }
+    catch (Exception ex)
+    {
+      Core.Logger.LogError(ex, "SteamRestrict failed to initialize cache cleanup service");
+    }
   }
 
   private void LoadConfig()
@@ -145,6 +173,7 @@ public partial class SteamRestrict : BasePlugin {
   public override void Unload() {
     try
     {
+      _cacheCleanup?.Stop();
       _warningTimers?.CancelAll();
       _httpClient.Dispose();
     }
