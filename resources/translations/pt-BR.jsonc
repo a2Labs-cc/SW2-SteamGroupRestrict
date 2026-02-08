@@ -1,0 +1,22 @@
+{
+  "steamrestrict.private_profile_warning_chat": "[green]Seu Perfil Steam ou os detalhes do jogo estão privados. Defina-os como Público para jogar. Você será kickado em {0} segundos.[/]",
+
+  "steamrestrict.log.disabled": "SteamRestrict desativado: SteamWebAPI está vazia",
+  "steamrestrict.log.player_not_found": "SteamRestrict OnClientPutInServer: jogador não encontrado para PlayerId={0}",
+  "steamrestrict.log.steamid_zero": "SteamRestrict OnClientPutInServer: SteamID era 0 para PlayerId={0}",
+  "steamrestrict.log.validating_join": "SteamRestrict validando entrada: Nome={0} SteamId={1}",
+  "steamrestrict.log.restriction_violated": "SteamRestrict restrição violada: SteamId={0} Tipo de Violação={1}",
+  "steamrestrict.log.restriction_violated_details": "SteamRestrict restrição violada: SteamID={0} Tipo de Violação={1} Detalhes={2}",
+  "steamrestrict.log.private_warning_started": "SteamRestrict aviso de perfil privado iniciado: SteamID={0} Tempo de Aviso={1} Intervalo de Impressão={2} Perfil Privado={3} Detalhes do Jogo Privados={4}",
+  "steamrestrict.log.validation_crashed": "SteamRestrict tarefa de validação falhou: PlayerID={0} SteamID={1}",
+  "steamrestrict.log.validation_passed": "SteamRestrict validação aprovada: SteamID={0} Nível CS2={1}/{2} Horas={3}/{4} Nível Steam={5}/{6} Privado={7}",
+
+  "steamrestrict.log.loading_config": "SteamRestrict carregando configuração de {0} (seção: SteamRestrict)",
+  "steamrestrict.log.config_path_not_resolved": "SteamRestrict não conseguiu resolver o caminho do config.jsonc",
+  "steamrestrict.log.config_loaded_bind": "SteamRestrict configuração carregada da seção 'SteamRestrict' (Bind)",
+  "steamrestrict.log.config_bound_empty_api": "SteamRestrict configuração vinculada, mas SteamWebAPI está vazia; tentando varredura alternativa por arquivo",
+  "steamrestrict.log.fallback_scan_failed": "SteamRestrict varredura alternativa por arquivo falhou",
+  "steamrestrict.log.recovered_api": "SteamRestrict recuperou a SteamWebAPI a partir da varredura de arquivos",
+  "steamrestrict.log.config_parsed": "SteamRestrict configuração analisada: SteamWebAPI={0}",
+  "steamrestrict.log.config_load_failed": "SteamRestrict falhou ao carregar a configuração (Bind); usando padrões"
+}
